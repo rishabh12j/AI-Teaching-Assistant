@@ -16,8 +16,6 @@ The AI-Powered Teaching Assistant is a Streamlit-based web application that leve
 
 Before you begin, ensure you have met the following requirements:
 
-- Python 3.7+
-- pip (Python package manager)
 - An OpenAI API key
 
 ## Installation
@@ -65,23 +63,5 @@ Before you begin, ensure you have met the following requirements:
 - `config.py`: Configuration settings
 - `content_generator.py`: Functions for generating notes and quizzes
 
-## Contributing
+## A working model of the project is here https://huggingface.co/spaces/Rishabh12j/Teaching_Assistant_AI
 
-Contributions to the AI-Powered Teaching Assistant are welcome. Please follow these steps:
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/AmazingFeature`)
-3. Make your changes
-4. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-5. Push to the branch (`git push origin feature/AmazingFeature`)
-6. Open a Pull Request
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## Acknowledgments
-
-- OpenAI for providing the API used in this project
-- Streamlit for the wonderful web app framework
-- All contributors who have helped to enhance this project
