@@ -1,22 +1,19 @@
 from openai import OpenAI
+
 from config import Config
 
-class Model:
-    @staticmethod
-    def openai_chatgpt(transcript, prompt, extra=""):
-        client = OpenAI(api_key=Config.get_openai_api_key())
-        model = Config.OPENAI_MODEL
-        
-        message = [{"role": "system", "content": prompt + extra},
-                   {"role": "user", "content": transcript}]
-        try:
-            response = client.chat.completions.create(
-                model=model, 
-                messages=message,
-                max_tokens=2000,
-                temperature=0.7
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            response_error = "⚠️ There is a problem with the API key or with python module."
-            return response_error, str(e)
+
+def client() -> OpenAI:
+    return OpenAI(api_key=Config.api_key(), base_url=Config.BASE_URL)
+
+
+def chat(system: str, user: str, *, json_mode: bool = False, max_tokens: int = 4000) -> str:
+    kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
+    response = client().chat.completions.create(
+        model=Config.TEXT_MODEL,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        temperature=0.4,
+        max_tokens=max_tokens,
+        **kwargs,
+    )
+    return response.choices[0].message.content or ""

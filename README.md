@@ -1,67 +1,59 @@
 # AI-Powered Teaching Assistant
 
-## Overview
+Upload a recorded lesson or paste a YouTube link. Whisper transcribes it, an LLM writes structured study notes, and you take an interactive multiple-choice quiz that is scored with explanations.
 
-The AI-Powered Teaching Assistant is a Streamlit-based web application that leverages artificial intelligence to transform educational content. It allows users to upload audio/video files or provide YouTube URLs, and then generates transcripts, study notes, and interactive quizzes based on the content.
+**Live demo:** https://huggingface.co/spaces/Rishabh12j/Teaching_Assistant_AI
 
-## Features
+## History
+- **2024:** first version on the OpenAI API (Whisper and GPT) with yt-dlp for YouTube audio.
+- **2026:** rebuilt on Groq's OpenAI-compatible API, captions fetched with youtube-transcript-api instead of downloading audio, quiz output validated before it is shown, and packaged as a Docker Space.
 
-- **Transcript Generation**: Automatically transcribes audio from uploaded files or YouTube videos.
-- **Notes Generation**: Creates concise, informative notes from the transcribed content.
-- **Quiz Creation**: Generates an interactive quiz based on the content.
-- **Multiple Input Options**: Supports both file uploads and YouTube URL inputs.
-- **Interactive UI**: User-friendly interface built with Streamlit.
+## How it works
+- **Speech-to-text:** Groq Whisper through Groq's OpenAI-compatible API.
+- **Notes:** one LLM call with a structured note-taking prompt.
+- **Quiz:** the LLM must return JSON (`question`, four `options`, `answer`, `explanation`). The app validates it (exactly four distinct options, answer must match one) and drops anything malformed before showing it.
+- **State:** Streamlit session state keeps the transcript, notes, quiz and answers between reruns.
 
-## Prerequisites
+## Project structure
+| File | Purpose |
+|---|---|
+| `app.py` | Streamlit interface |
+| `config.py` | Model names and API settings, read from environment variables |
+| `models.py` | OpenAI client pointed at Groq: chat and transcription calls |
+| `prompt.py` | Prompts for notes and quiz |
+| `content_generator.py` | Builds notes and quizzes, validates quiz JSON |
+| `Dockerfile` | Container used by the Hugging Face Space |
 
-Before you begin, ensure you have met the following requirements:
+## Run locally
+```bash
+git clone https://github.com/rishabh12j/ai-teaching-assistant.git
+cd ai-teaching-assistant
+pip install -r requirements.txt
+export GROQ_API_KEY=your_groq_key
+streamlit run app.py
+```
+Then open http://localhost:8501. The repo also includes a dev container, so it runs in GitHub Codespaces with no local setup (add `GROQ_API_KEY` as a Codespaces secret).
 
-- An OpenAI API key
+Or with Docker:
+```bash
+docker build -t teaching-assistant .
+docker run -p 8501:8501 -e GROQ_API_KEY=your_groq_key teaching-assistant
+```
 
-## Installation
+## Configuration
+| Setting | Default | Purpose |
+|---|---|---|
+| `GROQ_API_KEY` | (required) | Groq API key. `OPENAI_API_KEY` also works. |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Text model for notes and quiz |
+| `GROQ_STT_MODEL` | `whisper-large-v3-turbo` | Speech-to-text model |
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/your-username/ai-powered-teaching-assistant.git
-   cd ai-powered-teaching-assistant
-   ```
+## Limits
+Files up to 25 MB; transcripts trimmed to 24,000 characters. YouTube often refuses to share captions with cloud servers; upload the audio instead.
 
-2. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
+## Stack
+Streamlit 1.67 · OpenAI Python SDK pointed at Groq · youtube-transcript-api
 
-3. Set up your OpenAI API key:
-   - Create a `.env` file in the project root directory
-   - Add your OpenAI API key to the `.env` file:
-     ```
-     OPENAI_API_KEY=your_api_key_here
-     ```
+---
 
-## Usage
-
-1. Run the Streamlit app:
-   ```
-   streamlit run app.py
-   ```
-
-2. Open your web browser and go to the URL displayed in the terminal (usually `http://localhost:8501`).
-
-3. Choose your input method (file upload or YouTube URL).
-
-4. Process the video/audio to generate a transcript.
-
-5. Click "Generate Notes and Quiz" to create study materials.
-
-6. Take the interactive quiz and view your results.
-
-## Project Structure
-
-- `app.py`: Main application file
-- `models.py`: Contains the Model class for API interactions
-- `prompt.py`: Defines prompts for the AI model
-- `config.py`: Configuration settings
-- `content_generator.py`: Functions for generating notes and quizzes
-
-## A working model of the project is here https://huggingface.co/spaces/Rishabh12j/Teaching_Assistant_AI
-
+**Author:** Rishabh Jain, AI engineer (MSc Robotics and Embedded AI, Maynooth University)  
+[More demos](https://huggingface.co/Rishabh12j) · [GitHub](https://github.com/rishabh12j) · [Portfolio](https://rishabh12j.github.io)

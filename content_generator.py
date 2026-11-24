@@ -1,30 +1,63 @@
-from models import Model
-from prompt import Prompt
+import json
+import logging
+import re
 
-def generate_notes(transcript):
-    return Model.openai_chatgpt(transcript=transcript, prompt=Prompt.prompt1())
+import models
+import prompt
+from config import Config
 
-def generate_quiz(transcript):
-    raw_quiz = Model.openai_chatgpt(transcript, Prompt.prompt1(ID='quiz'))
-    return parse_quiz_content(raw_quiz)
 
-def parse_quiz_content(raw_quiz):
-    quiz_content = []
-    questions = raw_quiz.strip().split("\n\n")
+def _clip(transcript: str) -> str:
+    return transcript[: Config.MAX_TRANSCRIPT_CHARS]
 
-    for question in questions:
-        lines = question.split("\n")
-        if len(lines) < 6:  # Question + 4 options + correct answer
-            continue
 
-        question_text = lines[0].split(".", 1)[-1].strip()
-        options = [line.split(")", 1)[-1].strip() for line in lines[1:5]]
-        correct_answer = lines[-1].split(":")[-1].strip()
+def transcribe_file(name: str, data: bytes) -> str:
+    result = models.client().audio.transcriptions.create(model=Config.STT_MODEL, file=(name, data))
+    return result.text.strip()
 
-        quiz_content.append({
-            "question": question_text,
-            "options": options,
-            "correct_answer": correct_answer
-        })
 
-    return quiz_content[:10]  # Ensure we return at most 10 questions
+def youtube_transcript(url: str) -> str:
+    from youtube_transcript_api import YouTubeTranscriptApi
+
+    match = re.search(r"(?:v=|youtu\.be/|shorts/|embed/)([A-Za-z0-9_-]{11})", url)
+    if not match:
+        raise ValueError("That does not look like a YouTube link.")
+    try:
+        fetched = YouTubeTranscriptApi().fetch(match.group(1), languages=["en", "en-GB", "en-US", "hi"])
+    except Exception as exc:
+        raise ValueError(
+            "YouTube would not share captions for this video with a cloud server "
+            f"({type(exc).__name__}). Download the audio and upload it instead."
+        ) from exc
+    return " ".join(snippet.text for snippet in fetched)
+
+
+def generate_notes(transcript: str) -> str:
+    try:
+        return models.chat(prompt.NOTES, _clip(transcript))
+    except Exception as exc:
+        logging.exception("notes failed")
+        return f"⚠️ Notes could not be generated ({type(exc).__name__}: {exc})."
+
+
+def parse_quiz(raw: str) -> list[dict]:
+    data = json.loads(raw)
+    questions = []
+    for item in data.get("questions", []):
+        options = [str(o).strip() for o in item.get("options", [])]
+        answer = str(item.get("answer", "")).strip()
+        if len(options) == 4 and answer in options and item.get("question"):
+            questions.append(
+                {"question": str(item["question"]).strip(), "options": options, "answer": answer,
+                 "explanation": str(item.get("explanation", "")).strip()}
+            )
+    return questions[: Config.QUIZ_QUESTIONS]
+
+
+def generate_quiz(transcript: str) -> list[dict]:
+    try:
+        raw = models.chat(prompt.QUIZ.format(n=Config.QUIZ_QUESTIONS), _clip(transcript), json_mode=True)
+        return parse_quiz(raw)
+    except Exception:
+        logging.exception("quiz failed")
+        return []
